@@ -1,0 +1,18 @@
+.user-container {
+    padding: 20px;
+    margin: auto;
+    overflow-x: auto;
+  }
+  
+  .table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+  }
+  
+  .privilege-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 8px;
+  }
+  
