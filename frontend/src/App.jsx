@@ -2,7 +2,7 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import AppLayout from "./components/sidebar/AppLayout";
 import Dashboard from "./components/dashboard/Dashboard";
-import User from "./components/userprev/user";
+import User from "./components/userprev/User";
 
 const App = () => {
   return (
