@@ -14,9 +14,7 @@ import {
   ShoppingCartOutlined,
   ToolOutlined,
 } from "@ant-design/icons";
-// import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
-// Sample JSON Data for Cards
 const cardData = [
     { title: "Leads", value: 24, icon: <SolutionOutlined />, path: "/leads" },
     { title: "Opportunities", value: 1, icon: <ProfileOutlined />, path: "/opportunities" },
@@ -30,30 +28,7 @@ const cardData = [
     { title: "Maintenance", value: 5, icon: <ToolOutlined />, path: "/maintenance" },
   ];
 
-// // Sales Data for Chart
-// const salesData = [
-//   { name: "Jan", sales: 4000, profit: 2400, leads: 10 },
-//   { name: "Feb", sales: 5000, profit: 2800, leads: 15 },
-//   { name: "Mar", sales: 6000, profit: 3500, leads: 20 },
-//   { name: "Apr", sales: 7500, profit: 4200, leads: 30 },
-//   { name: "May", sales: 9000, profit: 5000, leads: 40 },
-// ];
 
-// // Recent Orders Table Data
-// const recentOrders = [
-//   { key: "1", orderId: "001", customer: "John Doe", total: "$150", status: "Completed", courier: "FedEx" },
-//   { key: "2", orderId: "002", customer: "Jane Smith", total: "$230", status: "Pending", courier: "UPS" },
-//   { key: "3", orderId: "003", customer: "David Lee", total: "$120", status: "Cancelled", courier: "DHL" },
-// ];
-
-// // Table Columns
-// const columns = [
-//   { title: "Order ID", dataIndex: "orderId", key: "orderId" },
-//   { title: "Customer", dataIndex: "customer", key: "customer" },
-//   { title: "Total", dataIndex: "total", key: "total" },
-//   { title: "Status", dataIndex: "status", key: "status" },
-//   { title: "Courier", dataIndex: "courier", key: "courier" },
-// ];
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -96,29 +71,7 @@ const Dashboard = () => {
         ))}
       </Row>
 
-      {/* Charts and Table */}
-      {/* <Row gutter={16} style={{ marginTop: 24 }}>
-        <Col xs={24} md={16}>
-          <Card title="Sales, Profit & Leads Analysis">
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={salesData}>
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="sales" fill="#8884d8" name="Sales" />
-                <Bar dataKey="profit" fill="#82ca9d" name="Profit" />
-                <Bar dataKey="leads" fill="#ff7300" name="Leads" />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-        </Col>
-        <Col xs={24} md={8}>
-          <Card title="Recent Orders">
-            <Table dataSource={recentOrders} columns={columns} pagination={false} />
-          </Card>
-        </Col>
-      </Row> */}
+   
     </div>
   );
 };

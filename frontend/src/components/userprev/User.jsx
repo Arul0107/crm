@@ -1,15 +1,17 @@
 import React, { useState } from "react";
-import { Table, Select, Button, Space } from "antd";
+import { Table, Select, Button, Space, Grid, Modal } from "antd";
 import "./User.css"; // Import CSS for styling
 
 const { Option } = Select;
+const { useBreakpoint } = Grid;
 
 const User = () => {
-  // Sample user data
+  const screens = useBreakpoint();
   const [users, setUsers] = useState([
     {
       key: "1",
       name: "John Doe",
+      role: "Admin",
       privileges: {
         admin: "edit",
         leads: "view",
@@ -37,123 +39,110 @@ const User = () => {
         security: "none",
         notifications: "view",
       },
-      isEditing: false,
     },
   ]);
 
-  // Handle privilege selection change
-  const handlePrivilegeChange = (key, privilege, value, type) => {
-    setUsers((prevUsers) =>
-      prevUsers.map((user) =>
-        user.key === key
-          ? {
-              ...user,
-              [type]: {
-                ...user[type],
-                [privilege]: value,
-              },
-            }
-          : user
-      )
-    );
+  const [editingUser, setEditingUser] = useState(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+
+  const handlePrivilegeChange = (privilege, value, type) => {
+    setEditingUser((prevUser) => ({
+      ...prevUser,
+      [type]: {
+        ...prevUser[type],
+        [privilege]: value,
+      },
+    }));
   };
 
-  // Toggle edit mode
-  const handleEdit = (key) => {
-    setUsers((prevUsers) =>
-      prevUsers.map((user) =>
-        user.key === key ? { ...user, isEditing: !user.isEditing } : user
-      )
-    );
+  const handleRoleChange = (value) => {
+    setEditingUser((prevUser) => ({
+      ...prevUser,
+      role: value, // Update role
+    }));
   };
 
-  // Save edited data
-  const handleSave = (key) => {
-    setUsers((prevUsers) =>
-      prevUsers.map((user) =>
-        user.key === key ? { ...user, isEditing: false } : user
-      )
-    );
+  const handleEdit = (user) => {
+    setEditingUser({ ...user }); // Clone user to avoid state mutation
+    setIsModalVisible(true);
   };
 
-  // Delete user
+  const handleSave = () => {
+    setUsers((prevUsers) =>
+      prevUsers.map((user) =>
+        user.key === editingUser.key ? { ...editingUser } : user
+      )
+    );
+    setIsModalVisible(false);
+  };
+
   const handleDelete = (key) => {
     setUsers(users.filter((user) => user.key !== key));
   };
 
-  // Define table columns
+  const renderPrivilegesTable = (privileges, type) => {
+    const privilegeColumns = [
+      {
+        title: "Privilege",
+        dataIndex: "privilege",
+        key: "privilege",
+      },
+      {
+        title: "Access Level",
+        dataIndex: "access",
+        key: "access",
+        render: (_, record) => (
+          <Select
+            value={editingUser?.[type]?.[record.privilege]} // Ensure safe access
+            onChange={(value) =>
+              handlePrivilegeChange(record.privilege, value, type)
+            }
+            style={{ width: 120 }}
+          >
+            <Option value="none">None</Option>
+            <Option value="view">View</Option>
+            <Option value="edit">Edit</Option>
+            <Option value="delete">Delete</Option>
+          </Select>
+        ),
+      },
+    ];
+
+    const privilegeData = Object.keys(privileges).map((privilege) => ({
+      key: privilege,
+      privilege,
+      access: privileges[privilege],
+    }));
+
+    return <Table columns={privilegeColumns} dataSource={privilegeData} pagination={false} />;
+  };
+
   const columns = [
+    {
+      title: "S.No",
+      key: "sno",
+      align: "center",
+      render: (_, __, index) => index + 1, // Dynamically generate serial number
+    },
     {
       title: "User Name",
       dataIndex: "name",
       key: "name",
+      align: "center",
     },
     {
-      title: "Privileges",
-      dataIndex: "privileges",
-      key: "privileges",
-      render: (_, record) => (
-        <Space wrap>
-          {Object.keys(record.privileges).map((privilege) => (
-            <div key={privilege} className="privilege-item">
-              <span>{privilege}: </span>
-              <Select
-                value={record.privileges[privilege]}
-                disabled={!record.isEditing}
-                onChange={(value) =>
-                  handlePrivilegeChange(record.key, privilege, value, "privileges")
-                }
-                style={{ width: 120 }}
-              >
-                <Option value="none">None</Option>
-                <Option value="view">View Only</Option>
-                <Option value="edit">Edit</Option>
-                <Option value="delete">Delete</Option>
-              </Select>
-            </div>
-          ))}
-        </Space>
-      ),
-    },
-    {
-      title: "Sidebar Privileges	",
-      dataIndex: "additionalPrivileges",
-      key: "additionalPrivileges",
-      render: (_, record) => (
-        <Space wrap>
-          {Object.keys(record.additionalPrivileges).map((privilege) => (
-            <div key={privilege} className="privilege-item">
-              <span>{privilege}: </span>
-              <Select
-                value={record.additionalPrivileges[privilege]}
-                disabled={!record.isEditing}
-                onChange={(value) =>
-                  handlePrivilegeChange(record.key, privilege, value, "additionalPrivileges")
-                }
-                style={{ width: 120 }}
-              >
-                <Option value="none">None</Option>
-                <Option value="view">View Only</Option>
-                <Option value="edit">Edit</Option>
-                <Option value="delete">Delete</Option>
-              </Select>
-            </div>
-          ))}
-        </Space>
-      ),
+      title: "Role",
+      dataIndex: "role",
+      key: "role",
+      align: "center",
     },
     {
       title: "Actions",
       key: "actions",
+      align: "center",
       render: (_, record) => (
-        <Space>
-          {record.isEditing ? (
-            <Button type="primary" onClick={() => handleSave(record.key)}>
-              Save
-            </Button>
-          ) : (
-            <Button onClick={() => handleEdit(record.key)}>Edit</Button>
-          )}
+        <Space size="middle">
+          <Button onClick={() => handleEdit(record)}>Edit</Button>
           <Button danger onClick={() => handleDelete(record.key)}>
             Delete
           </Button>
@@ -161,13 +150,45 @@ const User = () => {
       ),
     },
   ];
-
   return (
-    <div className="user-container">
-      <h2>User Privileges</h2>
+    <div className="user-container" style={{ backgroundColor:"white" }}>
+      <h2 style={{ textAlign: "center" }}>User Privileges</h2>
       <div className="table-wrapper">
         <Table columns={columns} dataSource={users} pagination={false} />
       </div>
+
+      <Modal
+        title="Edit User Privileges"
+        open={isModalVisible}
+        onOk={handleSave}
+        onCancel={() => setIsModalVisible(false)}
+        width={800}
+      >
+        {editingUser && (
+          <>
+            <h3>Role</h3>
+            <Select
+              value={editingUser.role}
+              style={{ width: "100%" }}
+              onChange={handleRoleChange} // Allow role editing
+            >
+              <Option value="Admin">Admin</Option>
+              <Option value="Super Admin">Super Admin</Option>
+              <Option value="Designer">Designer</Option>
+              <Option value="Developer">Developer</Option>
+              <Option value="SEO">SEO</Option>
+              <Option value="Digital Marketing">Digital Marketing</Option>
+              <Option value="Video Editor">Video Editor</Option>
+            </Select>
+
+            <h3 style={{ marginTop: "20px" }}>Privileges</h3>
+            {renderPrivilegesTable(editingUser.privileges, "privileges")}
+
+            <h3 style={{ marginTop: "20px" }}>Sidebar Privileges</h3>
+            {renderPrivilegesTable(editingUser.additionalPrivileges, "additionalPrivileges")}
+          </>
+        )}
+      </Modal>
     </div>
   );
 };

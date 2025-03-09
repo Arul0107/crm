@@ -1,41 +1,54 @@
-import React from "react";
-import { Layout, Menu, Avatar, Dropdown } from "antd";
+import React, { useState, useEffect } from "react";
+import { Layout, Menu, Avatar, Dropdown, Breadcrumb, Spin } from "antd";
 import {
   UserOutlined,
   LogoutOutlined,
   DashboardOutlined,
   SettingOutlined,
   AppstoreOutlined,
-  MailOutlined,
+  LockFilled,
+  UserAddOutlined,
+  EyeFilled,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../../assets/Acculer-Logo/Primary Logo 01.png";
 
 const { Header, Sider, Content, Footer } = Layout;
 
-// Define Menu Items Without Nested Children
 const menuItems = [
-  { key: "1", icon: <DashboardOutlined />, label: "Dashboard", path: "/dashboard" },
-  { key: "2", icon: <MailOutlined />, label: " User Privileges", path: "/user" },
-  { key: "3", icon: <MailOutlined />, label: "Sent", path: "/messages/sent" },
-  { key: "4", icon: <MailOutlined />, label: "Drafts", path: "/messages/drafts" },
-  { key: "5", icon: <AppstoreOutlined />, label: "Calendar", path: "/applications/calendar" },
-  { key: "6", icon: <AppstoreOutlined />, label: "Tasks", path: "/applications/tasks" },
-  { key: "7", icon: <AppstoreOutlined />, label: "Sales Reports", path: "/reports/sales" },
-  { key: "8", icon: <AppstoreOutlined />, label: "Analytics", path: "/reports/analytics" },
-  { key: "9", icon: <SettingOutlined />, label: "General Settings", path: "/settings/general" },
-  { key: "10", icon: <SettingOutlined />, label: "Security", path: "/settings/security" },
-  { key: "11", icon: <SettingOutlined />, label: "Notifications", path: "/settings/notifications" },
+  { key: "dashboard", icon: <DashboardOutlined />, label: "Dashboard", path: "/dashboard" },
+  { key: "user", icon: <LockFilled />, label: "Previlage", path: "/user" },
+  {
+    key: "userDetails",
+    icon: <UserOutlined />,
+    label: "User Management",
+    children: [
+      { key: "addUser", label: "Add User", icon: <UserAddOutlined />, path: "/add-user" },
+      { key: "viewUsers", label: "View Users", icon: <EyeFilled />, path: "/view-users" },
+    ],
+  },
+  { key: "report", icon: <AppstoreOutlined />, label: "Report", path: "/report" },
+  { key: "Profile", icon: <AppstoreOutlined />, label: "Profile", path: "/profile" },
+  { key: "analytics", icon: <AppstoreOutlined />, label: "Analytics", path: "/reports/analytics" },
+  { key: "generalSettings", icon: <SettingOutlined />, label: "General Settings", path: "/settings/general" },
+  { key: "security", icon: <SettingOutlined />, label: "Security", path: "/settings/security" },
+  { key: "notifications", icon: <SettingOutlined />, label: "Notifications", path: "/settings/notifications" },
 ];
 
 const AppLayout = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [loading, setLoading] = useState(true);
 
-  // Find the selected menu key based on the current path
-  const selectedKey = menuItems.find((item) => item.path === location.pathname)?.key || "1";
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
-  // Handle menu navigation
+  const selectedKey = menuItems.find((item) => item.path === location.pathname)?.key || "dashboard";
+
   const handleMenuClick = ({ key }) => {
     const selectedItem = menuItems.find((item) => item.key === key);
     if (selectedItem) {
@@ -43,36 +56,56 @@ const AppLayout = ({ children }) => {
     }
   };
 
-  // User dropdown menu
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    navigate("/login");
+  };
+
   const userMenu = (
     <Menu>
       <Menu.Item key="profile" icon={<UserOutlined />} onClick={() => navigate("/profile")}>
         Profile
       </Menu.Item>
-      <Menu.Item key="logout" icon={<LogoutOutlined />}>
+      <Menu.Item key="logout" icon={<LogoutOutlined />} onClick={handleLogout}>
         Logout
       </Menu.Item>
     </Menu>
   );
 
+  const generateBreadcrumbs = () => {
+    const pathParts = location.pathname.split("/").filter((part) => part);
+    return pathParts.map((part, index) => ({
+      path: `/${pathParts.slice(0, index + 1).join("/")}`,
+      label: part.charAt(0).toUpperCase() + part.slice(1),
+    }));
+  };
+
   return (
     <Layout style={{ minHeight: "100vh" }}>
-      {/* Sidebar */}
       <Sider width={250} style={{ background: "#fff", overflow: "auto", height: "100vh", position: "fixed", left: 0 }}>
         <div style={{ display: "flex", justifyContent: "center", padding: "16px" }}>
           <img src={logo} alt="CRM Logo" style={{ width: "150px" }} />
         </div>
         <Menu theme="light" mode="inline" selectedKeys={[selectedKey]} onClick={handleMenuClick}>
-          {menuItems.map((item) => (
-            <Menu.Item key={item.key} icon={item.icon}>
-              {item.label}
-            </Menu.Item>
-          ))}
+          {menuItems.map((item) =>
+            item.children ? (
+              <Menu.SubMenu key={item.key} icon={item.icon} title={item.label}>
+                {item.children.map((subItem) => (
+                  <Menu.Item key={subItem.key} onClick={() => navigate(subItem.path)}>
+                    {subItem.icon} {subItem.label}
+                  </Menu.Item>
+                ))}
+              </Menu.SubMenu>
+            ) : (
+              <Menu.Item key={item.key} icon={item.icon} onClick={() => navigate(item.path)}>
+                {item.label}
+              </Menu.Item>
+            )
+          )}
         </Menu>
       </Sider>
 
       <Layout style={{ marginLeft: 250 }}>
-        {/* Fixed Header */}
         <Header
           style={{
             position: "fixed",
@@ -83,24 +116,35 @@ const AppLayout = ({ children }) => {
             background: "#fff",
             display: "flex",
             alignItems: "center",
-            justifyContent: "flex-end",
+            justifyContent: "space-between",
           }}
         >
-        <Dropdown overlay={userMenu} placement="bottomRight">
-  <div style={{ display: "flex", alignItems: "center", cursor: "pointer", gap: "10px" }}>
-    <Avatar src="https://your-image-url.com/avatar.png" /> {/* Use a URL or import an image */}
-    <span style={{ fontWeight: "bold" }}>John Doe</span> {/* Replace with dynamic user name */}
-  </div>
-</Dropdown>
-
+          <Breadcrumb>
+            <Breadcrumb.Item key="home" onClick={() => navigate("/")}>Home</Breadcrumb.Item>
+            {generateBreadcrumbs().map((breadcrumb) => (
+              <Breadcrumb.Item key={breadcrumb.path} onClick={() => navigate(breadcrumb.path)}>
+                {breadcrumb.label}
+              </Breadcrumb.Item>
+            ))}
+          </Breadcrumb>
+          <Dropdown overlay={userMenu} placement="bottomRight">
+            <div style={{ display: "flex", alignItems: "center", cursor: "pointer", gap: "10px" }}>
+              <Avatar src="https://your-image-url.com/avatar.png" />
+              <span style={{ fontWeight: "bold" }}>John Doe</span>
+            </div>
+          </Dropdown>
         </Header>
 
-        {/* Main Content */}
         <Content style={{ marginTop: 64, padding: 24, minHeight: "calc(100vh - 112px)" }}>
-          {children}
+          {loading ? (
+            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }}>
+              <Spin size="large" />
+            </div>
+          ) : (
+            children
+          )}
         </Content>
 
-        {/* Footer */}
         <Footer style={{ textAlign: "center" }}>© 2025 Your CRM System</Footer>
       </Layout>
     </Layout>

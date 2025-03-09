@@ -1,18 +1,25 @@
 .user-container {
-    padding: 20px;
-    margin: auto;
-    overflow-x: auto;
-  }
-  
-  .table-wrapper {
-    width: 100%;
-    overflow-x: auto;
-  }
-  
-  .privilege-item {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    margin-bottom: 8px;
-  }
-  
+  padding: 20px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.privileges-wrapper {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 2fr));
+  gap: 10px;
+}
+
+.privilege-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+}
+
+.privilege-label {
+
+  white-space: nowrap;
+}
