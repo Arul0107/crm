@@ -1,51 +1,75 @@
 import React, { useState, useEffect } from "react";
 import { Layout, Menu, Avatar, Dropdown, Breadcrumb, Spin } from "antd";
+import { useNavigate, useLocation } from "react-router-dom";
+import axios from "axios";
 import {
-  UserOutlined,
-  LogoutOutlined,
   DashboardOutlined,
-  SettingOutlined,
-  AppstoreOutlined,
   LockFilled,
+  UserOutlined,
   UserAddOutlined,
   EyeFilled,
+  AppstoreOutlined,
+  SettingOutlined,
+  LogoutOutlined,
 } from "@ant-design/icons";
-import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../../assets/Acculer-Logo/Primary Logo 01.png";
 
 const { Header, Sider, Content, Footer } = Layout;
-
-const menuItems = [
-  { key: "dashboard", icon: <DashboardOutlined />, label: "Dashboard", path: "/dashboard" },
-  { key: "user", icon: <LockFilled />, label: "Previlage", path: "/user" },
-  {
-    key: "userDetails",
-    icon: <UserOutlined />,
-    label: "User Management",
-    children: [
-      { key: "addUser", label: "Add User", icon: <UserAddOutlined />, path: "/add-user" },
-      { key: "viewUsers", label: "View Users", icon: <EyeFilled />, path: "/view-users" },
-    ],
-  },
-  { key: "report", icon: <AppstoreOutlined />, label: "Report", path: "/report" },
-  { key: "Profile", icon: <AppstoreOutlined />, label: "Profile", path: "/profile" },
-  { key: "analytics", icon: <AppstoreOutlined />, label: "Analytics", path: "/reports/analytics" },
-  { key: "generalSettings", icon: <SettingOutlined />, label: "General Settings", path: "/settings/general" },
-  { key: "security", icon: <SettingOutlined />, label: "Security", path: "/settings/security" },
-  { key: "notifications", icon: <SettingOutlined />, label: "Notifications", path: "/settings/notifications" },
-];
 
 const AppLayout = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [loading, setLoading] = useState(true);
+  const [menuItems, setMenuItems] = useState([]);
+  const [userPermissions, setUserPermissions] = useState({});
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 2000);
-    return () => clearTimeout(timer);
+    const fetchUserPermissions = async () => {
+      try {
+        const response = await axios.get("/api/employees/your-employee-id/permissions");
+        setUserPermissions(response.data);
+        setMenuItems(getFilteredMenuItems(response.data));
+      } catch (error) {
+        console.error("Failed to fetch user permissions:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserPermissions();
   }, []);
+
+  const getFilteredMenuItems = (permissions) => {
+    const allMenuItems = [
+      { key: "dashboard", icon: <DashboardOutlined />, label: "Dashboard", path: "/dashboard" },
+      { key: "user", icon: <LockFilled />, label: "Privilege", path: "/user" },
+      {
+        key: "userDetails",
+        icon: <UserOutlined />,
+        label: "User Management",
+        children: [
+          { key: "addUser", label: "Add User", icon: <UserAddOutlined />, path: "/add-user" },
+          { key: "viewUsers", label: "View Users", icon: <EyeFilled />, path: "/view-users" },
+        ],
+      },
+      { key: "report", icon: <AppstoreOutlined />, label: "Report", path: "/report" },
+      { key: "profile", icon: <UserOutlined />, label: "Profile", path: "/profile" },
+      { key: "analytics", icon: <AppstoreOutlined />, label: "Analytics", path: "/reports/analytics" },
+      { key: "generalSettings", icon: <SettingOutlined />, label: "General Settings", path: "/settings/general" },
+      { key: "security", icon: <SettingOutlined />, label: "Security", path: "/settings/security" },
+      { key: "notifications", icon: <SettingOutlined />, label: "Notifications", path: "/settings/notifications" },
+    ];
+
+    return allMenuItems
+      .map((item) => {
+        if (item.children) {
+          const filteredChildren = item.children.filter((child) => permissions[child.key] !== "none");
+          return filteredChildren.length > 0 ? { ...item, children: filteredChildren } : null;
+        }
+        return permissions[item.key] !== "none" ? item : null;
+      })
+      .filter(Boolean);
+  };
 
   const selectedKey = menuItems.find((item) => item.path === location.pathname)?.key || "dashboard";
 
@@ -120,7 +144,9 @@ const AppLayout = ({ children }) => {
           }}
         >
           <Breadcrumb>
-            <Breadcrumb.Item key="home" onClick={() => navigate("/")}>Home</Breadcrumb.Item>
+            <Breadcrumb.Item key="home" onClick={() => navigate("/")}>
+              Home
+            </Breadcrumb.Item>
             {generateBreadcrumbs().map((breadcrumb) => (
               <Breadcrumb.Item key={breadcrumb.path} onClick={() => navigate(breadcrumb.path)}>
                 {breadcrumb.label}

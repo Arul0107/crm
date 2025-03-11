@@ -1,141 +1,143 @@
 import React, { useState, useEffect } from "react";
-import { Table, Button, Drawer, Form, Input, DatePicker, Select, message, Popconfirm } from "antd";
+import { Table, Button, Drawer, Form, Input, DatePicker, Select, Popconfirm } from "antd";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import axios from "axios";
 import moment from "moment";
+import toast, { Toaster } from "react-hot-toast";
 
 const { Option } = Select;
 
-const departmentOptions = ["Engineering", "HR", "Finance", "Marketing", "Operations"];
-
 const Viewuser = () => {
   const [users, setUsers] = useState([]);
-  const [isDrawerVisible, setIsDrawerVisible] = useState(false);
+  const [designations, setDesignations] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [departmentIds, setDepartmentIds] = useState([]);
+  const [employmentTypes, setEmploymentTypes] = useState([]);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [form] = Form.useForm();
 
-  // Fetch users from backend
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await axios.get("http://localhost:5000/api/users");
-        setUsers(response.data);
-      } catch (error) {
-        console.error("Error fetching users:", error);
-        message.error("Failed to fetch users. Please try again.");
-      }
-    };
-    fetchUsers();
-  }, []);
-
-  // Calculate age from DOB
-  const calculateAge = (dob) => {
-    return dob ? moment().diff(moment(dob), "years") : "N/A";
+  // ✅ Fetch users dynamically
+  const fetchUsers = async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/api/employees");
+      setUsers(response.data);
+    } catch (error) {
+      toast.error("Failed to fetch users.");
+    }
   };
 
+  // ✅ Fetch designations dynamically
+  const fetchDesignations = async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/api/designations");
+      setDesignations(response.data);
+    } catch (error) {
+      toast.error("Failed to fetch designations.");
+    }
+  };
+
+  // ✅ Fetch employment types dynamically
+  const fetchEmploymentTypes = async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/api/employment-types");
+      setEmploymentTypes(response.data);
+    } catch (error) {
+      toast.error("Failed to fetch employment types.");
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+    fetchDesignations();
+    fetchEmploymentTypes();
+  }, []);
+
+  // ✅ Fetch departments & department IDs based on selected designation
+  const handleDesignationChange = async (designation) => {
+    try {
+      const response = await axios.get(`http://localhost:5000/api/departments/${designation}`);
+      setDepartments(response.data.departments || []);
+      setDepartmentIds(response.data.departmentIds || []);
+      form.setFieldsValue({ companyInfo: { department: "", departmentId: "" } });
+    } catch (error) {
+      toast.error("Failed to fetch departments.");
+    }
+  };
+
+  // ✅ Open Edit Drawer
   const handleEdit = (user) => {
     setEditingUser(user);
     form.setFieldsValue({
-      personal: {
-        firstName: user.personal.firstName,
-        lastName: user.personal.lastName,
-        dob: moment(user.personal.dob), // Convert to moment object
-        email: user.personal.email,
-        contact: user.personal.contact,
-        address: user.personal.address,
+      personalInfo: {
+        firstName: user.personalInfo.firstName,
+        lastName: user.personalInfo.lastName,
+        dob: user.personalInfo.dob ? moment(user.personalInfo.dob) : null,
+        email: user.personalInfo.email,
+        contactNumber: user.personalInfo.contactNumber,
+        address: user.personalInfo.address,
       },
-      company: {
-        ...user.company,
-        department: user.company.department, // Ensure department is set
+      companyInfo: {
+        designation: user.companyInfo.designation,
+        department: user.companyInfo.department,
+        departmentId: user.companyInfo.departmentId,
+        employmentType: user.companyInfo.employmentType,
       },
-      bank: user.bank,
+      bankDetails: {
+        bankName: user.bankDetails.bankName,
+        ifscCode: user.bankDetails.ifscCode,
+        accountNumber: user.bankDetails.accountNumber,
+      },
     });
-    setIsDrawerVisible(true);
+
+    if (user.companyInfo.designation) {
+      handleDesignationChange(user.companyInfo.designation);
+    }
+
+    setIsDrawerOpen(true);
   };
 
+  // ✅ Update user dynamically with Toast notification
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
-      values.personal.dob = values.personal.dob ? values.personal.dob.toISOString() : null; // Convert date
+      values.personalInfo.dob = values.personalInfo.dob ? values.personalInfo.dob.toISOString() : null;
 
-      await axios.put(`http://localhost:5000/api/users/${editingUser._id}`, values);
+      await axios.put(`http://localhost:5000/api/employees/${editingUser._id}`, values);
 
-      const updatedUsers = users.map((user) =>
-        user._id === editingUser._id ? { ...user, ...values } : user
-      );
-
-      setUsers(updatedUsers);
-      message.success("User updated successfully!");
-      setIsDrawerVisible(false);
+      setUsers(users.map(user => (user._id === editingUser._id ? { ...user, ...values } : user)));
+      toast.success("User updated successfully!");
+      setIsDrawerOpen(false);
     } catch (error) {
-      console.error("Validation Failed:", error);
-      message.error("Failed to update user. Please try again.");
+      toast.error("Failed to update user.");
     }
   };
 
+  // ✅ Delete user dynamically with Toast notification
   const handleDelete = async (userId) => {
     try {
-      await axios.delete(`http://localhost:5000/api/users/${userId}`);
-      setUsers(users.filter((user) => user._id !== userId));
-      message.success("User deleted successfully!");
+      await axios.delete(`http://localhost:5000/api/employees/${userId}`);
+      setUsers(users.filter(user => user._id !== userId));
+      toast.success("User deleted successfully!");
     } catch (error) {
-      console.error("Error deleting user:", error);
-      message.error("Failed to delete user. Please try again.");
+      toast.error("Failed to delete user.");
     }
   };
 
+  // ✅ Table columns
   const columns = [
-    {
-      title: "Name",
-      dataIndex: "personal",
-      render: (personal) => `${personal.firstName} ${personal.lastName}`,
-    },
-    {
-      title: "Age",
-      dataIndex: "personal",
-      render: (personal) => calculateAge(personal.dob),
-    },
-    {
-      title: "Email",
-      dataIndex: "personal",
-      render: (personal) => personal.email,
-    },
-    {
-      title: "Contact",
-      dataIndex: "personal",
-      render: (personal) => personal.contact,
-    },
-    {
-      title: "Designation",
-      dataIndex: "company",
-      render: (company) => company.designation,
-    },
-    {
-      title: "Department",
-      dataIndex: "company",
-      render: (company) => company.department,
-    },
-    {
-      title: "Bank",
-      dataIndex: "bank",
-      render: (bank) => bank.bankName,
-    },
+    { title: "Name", dataIndex: "personalInfo", render: (p) => `${p.firstName} ${p.lastName}` },
+    { title: "DOB", dataIndex: "personalInfo", render: (p) => (p.dob ? moment(p.dob).format("DD-MM-YYYY") : "N/A") },
+    { title: "Email", dataIndex: "personalInfo", render: (p) => p.email },
+    { title: "Contact", dataIndex: "personalInfo", render: (p) => p.contactNumber },
+    { title: "Designation", dataIndex: "companyInfo", render: (c) => c.designation },
     {
       title: "Actions",
       render: (_, record) => (
         <>
-          <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
-            Edit
-          </Button>
-          <Popconfirm
-            title="Are you sure you want to delete this user?"
-            onConfirm={() => handleDelete(record._id)}
-            okText="Yes"
-            cancelText="No"
-          >
-            <Button type="link" danger icon={<DeleteOutlined />}>
-              Delete
-            </Button>
+          <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)}>Edit</Button>
+          <Popconfirm title="Are you sure?" onConfirm={() => handleDelete(record._id)} okText="Yes" cancelText="No">
+            <Button type="link" danger icon={<DeleteOutlined />}>Delete</Button>
           </Popconfirm>
         </>
       ),
@@ -143,83 +145,29 @@ const Viewuser = () => {
   ];
 
   return (
-    <div style={{ margin: "0 auto" }}>
+    <div style={{ margin: "0 auto", padding: "20px" }}>
+      <Toaster />
       <h2>User List</h2>
       <Table dataSource={users} columns={columns} rowKey="_id" />
 
-      <Drawer
-        title="Edit User"
-        width={500}
-        visible={isDrawerVisible}
-        onClose={() => {
-          setIsDrawerVisible(false);
-          form.resetFields(); // Reset form fields on close
-        }}
-        footer={
-          <div style={{ textAlign: "right" }}>
-            <Button onClick={() => setIsDrawerVisible(false)} style={{ marginRight: 8 }}>
-              Cancel
-            </Button>
-            <Button type="primary" onClick={handleSave}>
-              Save
-            </Button>
-          </div>
-        }
-      >
+      {/* Edit Drawer */}
+      <Drawer title="Edit User" width={500} open={isDrawerOpen} onClose={() => { setIsDrawerOpen(false); form.resetFields(); }}
+        footer={<div style={{ textAlign: "right" }}><Button onClick={() => setIsDrawerOpen(false)} style={{ marginRight: 8 }}>Cancel</Button><Button type="primary" onClick={handleSave}>Save</Button></div>}>
+        
         <Form form={form} layout="vertical">
           <h3>Personal Information</h3>
-          <Form.Item name={["personal", "firstName"]} label="First Name">
-            <Input />
-          </Form.Item>
-          <Form.Item name={["personal", "lastName"]} label="Last Name">
-            <Input />
-          </Form.Item>
-          <Form.Item name={["personal", "dob"]} label="Date of Birth">
-            <DatePicker style={{ width: "100%" }} />
-          </Form.Item>
-          <Form.Item name={["personal", "email"]} label="Email">
-            <Input />
-          </Form.Item>
-          <Form.Item name={["personal", "contact"]} label="Contact">
-            <Input />
-          </Form.Item>
-          <Form.Item name={["personal", "address"]} label="Address">
-            <Input.TextArea />
-          </Form.Item>
+          <Form.Item name={["personalInfo", "firstName"]} label="First Name"><Input /></Form.Item>
+          <Form.Item name={["personalInfo", "lastName"]} label="Last Name"><Input /></Form.Item>
+          <Form.Item name={["personalInfo", "dob"]} label="Date of Birth"><DatePicker style={{ width: "100%" }} format="DD-MM-YYYY" /></Form.Item>
+          <Form.Item name={["personalInfo", "email"]} label="Email"><Input /></Form.Item>
+          <Form.Item name={["personalInfo", "contactNumber"]} label="Contact"><Input /></Form.Item>
+          <Form.Item name={["personalInfo", "address"]} label="Address"><Input.TextArea /></Form.Item>
 
           <h3>Company Information</h3>
-          <Form.Item name={["company", "designation"]} label="Designation">
-            <Input />
-          </Form.Item>
-          <Form.Item name={["company", "department"]} label="Department">
-            <Select>
-              {departmentOptions.map((dept) => (
-                <Option key={dept} value={dept}>
-                  {dept}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-          <Form.Item name={["company", "employmentType"]} label="Employment Type">
-            <Select>
-              <Option value="Full-Time">Full-Time</Option>
-              <Option value="Part-Time">Part-Time</Option>
-            </Select>
-          </Form.Item>
-
-          <h3>Bank Information</h3>
-          <Form.Item name={["bank", "bankName"]} label="Bank Name">
-            <Input />
-          </Form.Item>
-          <Form.Item name={["bank", "accountNumber"]} label="Account Number">
-            <Input />
-          </Form.Item>
-          <Form.Item name={["bank", "ifsc"]} label="IFSC Code">
-            <Input />
-          </Form.Item>
-          <Form.Item name={["bank", "pan"]} label="PAN Number">
-            <Input />
-          </Form.Item>
+          <Form.Item label="Designation" name={["companyInfo", "designation"]}><Select onChange={handleDesignationChange}>{designations.map(d => <Option key={d} value={d}>{d}</Option>)}</Select></Form.Item>
+          <Form.Item label="Department" name={["companyInfo", "department"]}><Select disabled={!departments.length}>{departments.map(d => <Option key={d} value={d}>{d}</Option>)}</Select></Form.Item>
+          <Form.Item label="Department ID" name={["companyInfo", "departmentId"]}><Select disabled={!departmentIds.length}>{departmentIds.map(id => <Option key={id} value={id}>{id}</Option>)}</Select></Form.Item>
+          <Form.Item label="Employment Type" name={["companyInfo", "employmentType"]}><Select>{employmentTypes.map(t => <Option key={t} value={t}>{t}</Option>)}</Select></Form.Item>
         </Form>
       </Drawer>
     </div>

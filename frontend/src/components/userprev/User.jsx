@@ -1,86 +1,74 @@
-import React, { useState } from "react";
-import { Table, Select, Button, Space, Grid, Modal } from "antd";
-import "./User.css"; // Import CSS for styling
+import React, { useState, useEffect } from "react";
+import { Table, Select, Button, Space, Grid, Modal, Input } from "antd";
+import axios from "axios";
+import "./User.css";
 
 const { Option } = Select;
 const { useBreakpoint } = Grid;
 
 const User = () => {
   const screens = useBreakpoint();
-  const [users, setUsers] = useState([
-    {
-      key: "1",
-      name: "John Doe",
-      role: "Admin",
-      privileges: {
-        admin: "edit",
-        leads: "view",
-        opportunities: "none",
-        accounts: "edit",
-        notes: "none",
-        operations: "none",
-        payments: "edit",
-        users: "none",
-        enquiry: "view",
-        exportData: "none",
-        workorder: "none",
-        googleSheet: "view",
-      },
-      additionalPrivileges: {
-        dashboard: "view",
-        userPrivileges: "edit",
-        sent: "none",
-        drafts: "view",
-        calendar: "edit",
-        tasks: "none",
-        salesReports: "view",
-        analytics: "none",
-        generalSettings: "edit",
-        security: "none",
-        notifications: "view",
-      },
-    },
-  ]);
-
+  const [users, setUsers] = useState([]);
   const [editingUser, setEditingUser] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
 
-  const handlePrivilegeChange = (privilege, value, type) => {
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const response = await axios.get("/api/employees");
+      setUsers(response.data);
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+    }
+  };
+
+  const handleInputChange = (field, value) => {
     setEditingUser((prevUser) => ({
       ...prevUser,
-      [type]: {
-        ...prevUser[type],
+      [field]: value,
+    }));
+  };
+
+  const handlePrivilegeChange = (privilege, value) => {
+    setEditingUser((prevUser) => ({
+      ...prevUser,
+      permissions: {
+        ...prevUser.permissions,
         [privilege]: value,
       },
     }));
   };
 
-  const handleRoleChange = (value) => {
-    setEditingUser((prevUser) => ({
-      ...prevUser,
-      role: value, // Update role
-    }));
-  };
-
   const handleEdit = (user) => {
-    setEditingUser({ ...user }); // Clone user to avoid state mutation
+    setEditingUser({ ...user });
     setIsModalVisible(true);
   };
 
-  const handleSave = () => {
-    setUsers((prevUsers) =>
-      prevUsers.map((user) =>
-        user.key === editingUser.key ? { ...editingUser } : user
-      )
-    );
-    setIsModalVisible(false);
+  const handleSave = async () => {
+    try {
+      await axios.put(`/api/employees/${editingUser._id}/permissions`, {
+        permissions: editingUser.permissions,
+      });
+      fetchUsers();
+      setIsModalVisible(false);
+    } catch (error) {
+      console.error("Failed to update user permissions:", error);
+    }
   };
 
-  const handleDelete = (key) => {
-    setUsers(users.filter((user) => user.key !== key));
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`/api/employees/${id}`);
+      fetchUsers();
+    } catch (error) {
+      console.error("Failed to delete user:", error);
+    }
   };
 
-  const renderPrivilegesTable = (privileges, type) => {
+  const renderPrivilegesTable = (privileges) => {
     const privilegeColumns = [
       {
         title: "Privilege",
@@ -93,10 +81,8 @@ const User = () => {
         key: "access",
         render: (_, record) => (
           <Select
-            value={editingUser?.[type]?.[record.privilege]} // Ensure safe access
-            onChange={(value) =>
-              handlePrivilegeChange(record.privilege, value, type)
-            }
+            value={editingUser?.permissions?.[record.privilege]}
+            onChange={(value) => handlePrivilegeChange(record.privilege, value)}
             style={{ width: 120 }}
           >
             <Option value="none">None</Option>
@@ -122,17 +108,30 @@ const User = () => {
       title: "S.No",
       key: "sno",
       align: "center",
-      render: (_, __, index) => index + 1, // Dynamically generate serial number
+      render: (_, __, index) => index + 1,
+    },
+    {
+      title: "User ID",
+      dataIndex: "employeeId",
+      key: "employeeId",
+      align: "center",
     },
     {
       title: "User Name",
-      dataIndex: "name",
+      dataIndex: "personalInfo.firstName",
       key: "name",
+      align: "center",
+      render: (text, record) => `${record.personalInfo.firstName} ${record.personalInfo.lastName}`,
+    },
+    {
+      title: "Department",
+      dataIndex: "companyInfo.department",
+      key: "department",
       align: "center",
     },
     {
       title: "Role",
-      dataIndex: "role",
+      dataIndex: "companyInfo.designation",
       key: "role",
       align: "center",
     },
@@ -143,22 +142,21 @@ const User = () => {
       render: (_, record) => (
         <Space size="middle">
           <Button onClick={() => handleEdit(record)}>Edit</Button>
-          <Button danger onClick={() => handleDelete(record.key)}>
-            Delete
-          </Button>
+          <Button danger onClick={() => handleDelete(record._id)}>Delete</Button>
         </Space>
       ),
     },
   ];
+
   return (
-    <div className="user-container" style={{ backgroundColor:"white" }}>
+    <div className="user-container" style={{ backgroundColor: "white" }}>
       <h2 style={{ textAlign: "center" }}>User Privileges</h2>
       <div className="table-wrapper">
         <Table columns={columns} dataSource={users} pagination={false} />
       </div>
 
       <Modal
-        title="Edit User Privileges"
+        title="Edit User Details"
         open={isModalVisible}
         onOk={handleSave}
         onCancel={() => setIsModalVisible(false)}
@@ -166,26 +164,32 @@ const User = () => {
       >
         {editingUser && (
           <>
+            <h3>User ID</h3>
+            <Input
+              value={editingUser.employeeId}
+              onChange={(e) => handleInputChange("employeeId", e.target.value)}
+            />
+
+            <h3>Name</h3>
+            <Input
+              value={`${editingUser.personalInfo.firstName} ${editingUser.personalInfo.lastName}`}
+              disabled
+            />
+
+            <h3>Department</h3>
+            <Input
+              value={editingUser.companyInfo.department}
+              disabled
+            />
+
             <h3>Role</h3>
-            <Select
-              value={editingUser.role}
-              style={{ width: "100%" }}
-              onChange={handleRoleChange} // Allow role editing
-            >
-              <Option value="Admin">Admin</Option>
-              <Option value="Super Admin">Super Admin</Option>
-              <Option value="Designer">Designer</Option>
-              <Option value="Developer">Developer</Option>
-              <Option value="SEO">SEO</Option>
-              <Option value="Digital Marketing">Digital Marketing</Option>
-              <Option value="Video Editor">Video Editor</Option>
-            </Select>
+            <Input
+              value={editingUser.companyInfo.designation}
+              disabled
+            />
 
             <h3 style={{ marginTop: "20px" }}>Privileges</h3>
-            {renderPrivilegesTable(editingUser.privileges, "privileges")}
-
-            <h3 style={{ marginTop: "20px" }}>Sidebar Privileges</h3>
-            {renderPrivilegesTable(editingUser.additionalPrivileges, "additionalPrivileges")}
+            {renderPrivilegesTable(editingUser.permissions)}
           </>
         )}
       </Modal>

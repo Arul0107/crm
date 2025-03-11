@@ -7,7 +7,12 @@
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
-  "keywords": ["express", "mongodb", "backend", "authentication"],
+  "keywords": [
+    "express",
+    "mongodb",
+    "backend",
+    "authentication"
+  ],
   "author": "Your Name",
   "license": "ISC",
   "type": "commonjs",

@@ -8,22 +8,17 @@ import AddUser from "./components/Adduser/AddUser";
 import ProfilePage from "./components/profile/ProfilePage";
 import Viewuser from "./components/Adduser/Viewuser";
 import Report from "./components/report/Report";
-import Login from "./components/login/Login";
-
-const PrivateRoute = ({ children }) => {
-  const token = localStorage.getItem("token");
-  return token ? children : <Navigate to="/login" />;
-};
 
 const App = () => {
   return (
     <div>
-       <Toaster position="top-right" />
-  <Router>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/*" element={
-          <PrivateRoute>
+      <Toaster position="top-right" />
+      <Router>
+        <Routes>
+          {/* Default route redirecting to the dashboard */}
+          <Route path="/" element={<Navigate to="/dashboard" />} />
+
+          <Route path="/*" element={
             <AppLayout>
               <Routes>
                 <Route path="/dashboard" element={<Dashboard />} />
@@ -34,12 +29,10 @@ const App = () => {
                 <Route path="/report" element={<Report />} />
               </Routes>
             </AppLayout>
-          </PrivateRoute>
-        } />
-      </Routes>
-    </Router>
+          } />
+        </Routes>
+      </Router>
     </div>
-  
   );
 };
 
